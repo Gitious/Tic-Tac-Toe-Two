@@ -1,8 +1,9 @@
 <template>
   <div>
-    <h1>Welcome to Tic Tac Toe Two</h1>
-    <router-link to="/pvp">Player vs Player</router-link>
+    <h1>Welcome to Infinite Tic Tac Toe</h1>
+    <router-link to="/pvp-local">Player vs Player (Local)</router-link>
     <router-link to="/pve">Player vs Computer</router-link>
+    <router-link to="/pvp-online">Player vs Player Beta (Online)</router-link>
   </div>
 </template>
 

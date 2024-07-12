@@ -14,6 +14,9 @@ export default {
   name: 'GameBoard',
   props: {
     mode: String,
+    socket: Object,
+    roomId: String,
+    playerMark: String
   },
   data() {
     return {
@@ -30,6 +33,8 @@ export default {
 
       const newBoard = this.board.slice();
       const currentMark = this.isXNext ? 'X' : 'O';
+      if (this.mode === 'online' && currentMark !== this.playerMark) return; // Only allow the current player to make a move
+
       newBoard[index] = currentMark;
       this.board = newBoard;
       this.isXNext = !this.isXNext;
@@ -57,8 +62,9 @@ export default {
 
       this.checkWinner();
 
-      // If there's a winner, do not proceed with bot's move
-      if (!this.winner && this.mode === 'pve' && !this.isXNext) {
+      if (this.mode === 'online') {
+        this.socket.emit('move', { roomId: this.roomId, board: this.board, isXNext: this.isXNext });
+      } else if (!this.winner && this.mode === 'pve' && !this.isXNext) {
         this.makeBotMove();
       }
     },
@@ -156,6 +162,15 @@ export default {
       }
     },
   },
+  mounted() {
+    if (this.mode === 'online' && this.socket) {
+      this.socket.on('moveMade', (data) => {
+        this.board = data.board;
+        this.isXNext = data.isXNext;
+        this.checkWinner();
+      });
+    }
+  }
 };
 </script>
 

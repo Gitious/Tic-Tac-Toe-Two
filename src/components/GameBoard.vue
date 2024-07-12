@@ -57,7 +57,8 @@ export default {
 
       this.checkWinner();
 
-      if (this.mode === 'pve' && !this.isXNext) {
+      // If there's a winner, do not proceed with bot's move
+      if (!this.winner && this.mode === 'pve' && !this.isXNext) {
         this.makeBotMove();
       }
     },

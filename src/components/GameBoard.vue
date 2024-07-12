@@ -1,0 +1,171 @@
+<template>
+  <div>
+    <div v-for="row in 3" :key="row" class="row">
+      <button v-for="col in 3" :key="col" @click="handleClick((row - 1) * 3 + (col - 1))">
+        {{ board[(row - 1) * 3 + (col - 1)] }}
+      </button>
+    </div>
+    <p v-if="winner">{{ winner }} wins!</p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'GameBoard',
+  props: {
+    mode: String,
+  },
+  data() {
+    return {
+      board: Array(9).fill(null),
+      isXNext: true,
+      xMoveHistory: [],
+      oMoveHistory: [],
+      winner: null,
+    };
+  },
+  methods: {
+    handleClick(index) {
+      if (this.board[index] || this.winner || !this.canPlaceMark(index)) return;
+
+      const newBoard = this.board.slice();
+      const currentMark = this.isXNext ? 'X' : 'O';
+      newBoard[index] = currentMark;
+      this.board = newBoard;
+      this.isXNext = !this.isXNext;
+
+      const moveHistory = currentMark === 'X' ? this.xMoveHistory : this.oMoveHistory;
+      const newHistory = moveHistory.concat({ mark: currentMark, index });
+
+      if (currentMark === 'X') {
+        this.xMoveHistory = newHistory;
+      } else {
+        this.oMoveHistory = newHistory;
+      }
+
+      if (newHistory.length > 3) {
+        const firstMove = newHistory[0];
+        if (firstMove.mark === newBoard[firstMove.index]) {
+          newBoard[firstMove.index] = null;
+        }
+        if (currentMark === 'X') {
+          this.xMoveHistory = newHistory.slice(1);
+        } else {
+          this.oMoveHistory = newHistory.slice(1);
+        }
+      }
+
+      this.checkWinner();
+
+      if (this.mode === 'pve' && !this.isXNext) {
+        this.makeBotMove();
+      }
+    },
+    canPlaceMark(index) {
+      const moveHistory = this.isXNext ? this.xMoveHistory : this.oMoveHistory;
+      if (moveHistory.length < 3) return true;
+      const firstMove = moveHistory[0];
+      return firstMove.index !== index;
+    },
+    makeBotMove() {
+      setTimeout(() => {
+        const botMoveIndex = this.findBotMove();
+        if (botMoveIndex !== null) {
+          const newBoard = this.board.slice();
+          newBoard[botMoveIndex] = 'O';
+          this.board = newBoard;
+          this.isXNext = true;
+          const newHistory = this.oMoveHistory.concat({ mark: 'O', index: botMoveIndex });
+          this.oMoveHistory = newHistory;
+
+          if (newHistory.length > 3) {
+            const firstMove = newHistory[0];
+            if (firstMove.mark === newBoard[firstMove.index]) {
+              newBoard[firstMove.index] = null;
+            }
+            this.oMoveHistory = newHistory.slice(1);
+          }
+          this.checkWinner();
+        }
+      }, 500);
+    },
+    findBotMove() {
+      let move = this.findWinningMove('O');
+      if (move !== null) return move;
+
+      move = this.findWinningMove('X');
+      if (move !== null) return move;
+
+      if (this.board[4] === null) return 4;
+
+      const corners = [0, 2, 6, 8];
+      for (let corner of corners) {
+        if (this.board[corner] === null) return corner;
+      }
+
+      let emptyIndexes = [];
+      this.board.forEach((cell, index) => {
+        if (!cell) emptyIndexes.push(index);
+      });
+      if (emptyIndexes.length > 0) {
+        return emptyIndexes[Math.floor(Math.random() * emptyIndexes.length)];
+      }
+      return null;
+    },
+    findWinningMove(mark) {
+      const lines = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
+      ];
+      for (let [a, b, c] of lines) {
+        if (this.board[a] === mark && this.board[b] === mark && this.board[c] === null) {
+          return c;
+        }
+        if (this.board[a] === mark && this.board[c] === mark && this.board[b] === null) {
+          return b;
+        }
+        if (this.board[b] === mark && this.board[c] === mark && this.board[a] === null) {
+          return a;
+        }
+      }
+      return null;
+    },
+    checkWinner() {
+      const lines = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
+      ];
+      for (let [a, b, c] of lines) {
+        if (this.board[a] && this.board[a] === this.board[b] && this.board[a] === this.board[c]) {
+          this.winner = this.board[a];
+          return;
+        }
+      }
+    },
+  },
+};
+</script>
+
+<style scoped>
+.row {
+  display: flex;
+  justify-content: center;
+}
+button {
+  width: 100px;
+  height: 100px;
+  font-size: 24px;
+}
+</style>

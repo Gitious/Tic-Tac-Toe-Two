@@ -1,14 +1,14 @@
 <template>
   <div>
-    <h1>Welcome to Infinite Tic Tac Toe</h1>
-    <router-link to="/local">Play Local</router-link>
-    <router-link to="/online">Play Online</router-link>
+    <h1>Select Local Game Mode</h1>
+    <router-link to="/local/pvp">Player vs Player (Local)</router-link>
+    <router-link to="/local/pve">Player vs Computer</router-link>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'HomePage'
+  name: 'LocalPlay'
 };
 </script>
 

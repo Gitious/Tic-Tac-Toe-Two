@@ -6,6 +6,9 @@
       </button>
     </div>
     <p v-if="winner">{{ winner }} wins!</p>
+    <p v-if="seriesWinner">{{ seriesWinner }} wins the series!</p>
+    <p>Scores: X - {{ scores.X }}, O - {{ scores.O }}</p>
+    <button @click="restartGame">Restart Game</button>
   </div>
 </template>
 
@@ -16,7 +19,8 @@ export default {
     mode: String,
     socket: Object,
     roomId: String,
-    playerMark: String
+    playerMark: String,
+    gameMode: String
   },
   data() {
     return {
@@ -25,11 +29,13 @@ export default {
       xMoveHistory: [],
       oMoveHistory: [],
       winner: null,
+      scores: { X: 0, O: 0 },
+      seriesWinner: null
     };
   },
   methods: {
     handleClick(index) {
-      if (this.board[index] || this.winner || !this.canPlaceMark(index)) return;
+      if (this.board[index] || this.winner || this.seriesWinner || !this.canPlaceMark(index)) return;
 
       const newBoard = this.board.slice();
       const currentMark = this.isXNext ? 'X' : 'O';
@@ -62,9 +68,18 @@ export default {
 
       this.checkWinner();
 
+      if (this.winner) {
+        this.updateScores(this.winner);
+        this.checkSeriesWinner();
+      }
+
+      console.log('Current Mode:', this.mode); // Debug log
+      console.log('Next Player:', this.isXNext ? 'X' : 'O'); // Debug log
+
       if (this.mode === 'online') {
         this.socket.emit('move', { roomId: this.roomId, board: this.board, isXNext: this.isXNext });
       } else if (!this.winner && this.mode === 'pve' && !this.isXNext) {
+        console.log('Making bot move'); // Debug log
         this.makeBotMove();
       }
     },
@@ -77,6 +92,7 @@ export default {
     makeBotMove() {
       setTimeout(() => {
         const botMoveIndex = this.findBotMove();
+        console.log('Bot move index:', botMoveIndex); // Debug log
         if (botMoveIndex !== null) {
           const newBoard = this.board.slice();
           newBoard[botMoveIndex] = 'O';
@@ -93,6 +109,10 @@ export default {
             this.oMoveHistory = newHistory.slice(1);
           }
           this.checkWinner();
+          if (this.winner) {
+            this.updateScores(this.winner);
+            this.checkSeriesWinner();
+          }
         }
       }, 500);
     },
@@ -161,13 +181,46 @@ export default {
         }
       }
     },
+    updateScores(winner) {
+      this.scores[winner]++;
+      if (this.gameMode === 'single') {
+        this.seriesWinner = winner;
+      }
+    },
+    checkSeriesWinner() {
+      if (this.gameMode === 'bo3' && (this.scores.X === 2 || this.scores.O === 2)) {
+        this.seriesWinner = this.scores.X === 2 ? 'X' : 'O';
+      } else if (this.gameMode === 'bo5' && (this.scores.X === 3 || this.scores.O === 3)) {
+        this.seriesWinner = this.scores.X === 3 ? 'X' : 'O';
+      } else {
+        this.resetBoard();
+      }
+    },
+    resetBoard() {
+      this.board = Array(9).fill(null);
+      this.isXNext = true;
+      this.xMoveHistory = [];
+      this.oMoveHistory = [];
+      this.winner = null;
+    },
+    restartGame() {
+      this.board = Array(9).fill(null);
+      this.isXNext = true;
+      this.xMoveHistory = [];
+      this.oMoveHistory = [];
+      this.winner = null;
+      this.scores = { X: 0, O: 0 };
+      this.seriesWinner = null;
+    }
   },
   mounted() {
     if (this.mode === 'online' && this.socket) {
       this.socket.on('moveMade', (data) => {
-        this.board = data.board;
-        this.isXNext = data.isXNext;
-        this.checkWinner();
+        if (data.board && data.board.length === 9) {
+          this.board = data.board;
+          this.isXNext = data.isXNext;
+          this.checkWinner();
+        }
       });
     }
   }

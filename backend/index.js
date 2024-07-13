@@ -25,7 +25,7 @@ io.on('connection', (socket) => {
 
   socket.on('createRoom', () => {
     const roomId = Math.random().toString(36).substring(2, 7); // Generate a random room ID
-    rooms[roomId] = { players: [socket.id], host: socket.id };
+    rooms[roomId] = { players: [socket.id] };
     socket.join(roomId);
     socket.emit('roomCreated', roomId);
   });
@@ -34,7 +34,7 @@ io.on('connection', (socket) => {
     if (rooms[roomId] && rooms[roomId].players.length === 1) {
       rooms[roomId].players.push(socket.id);
       socket.join(roomId);
-      io.in(roomId).emit('startGame', { roomId, players: rooms[roomId].players });
+      io.in(roomId).emit('startGame', roomId);
     } else {
       socket.emit('roomFull');
     }
@@ -48,13 +48,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Client disconnected');
     // Handle room cleanup if needed
-    for (const roomId in rooms) {
-      const room = rooms[roomId];
-      room.players = room.players.filter(player => player !== socket.id);
-      if (room.players.length === 0) {
-        delete rooms[roomId];
-      }
-    }
   });
 });
 

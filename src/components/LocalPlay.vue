@@ -12,7 +12,30 @@
 
 <script>
 export default {
-  name: 'LocalPlay'
+  name: 'LocalPlay',
+  data() {
+    return {
+      backgroundMusic: null
+    };
+  },
+  methods: {
+    startBackgroundMusic() {
+      this.backgroundMusic.play();
+    }
+  },
+  mounted() {
+    // Initialize audio
+    this.backgroundMusic = new Audio(require('@/assets/bkgd-music.mp3'));
+    this.backgroundMusic.loop = true;
+    this.backgroundMusic.volume = 0.3;
+    this.startBackgroundMusic();
+  },
+  beforeUnmount() {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.pause();
+      this.backgroundMusic.currentTime = 0;
+    }
+  }
 };
 </script>
 

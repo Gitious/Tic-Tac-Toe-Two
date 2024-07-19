@@ -305,7 +305,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
+  padding: 0px;
   background-color: #1a1a1a;
   min-height: 100vh;
   font-family: Arial, sans-serif;
@@ -511,4 +511,5 @@ export default {
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.726);
 }
+
 </style>

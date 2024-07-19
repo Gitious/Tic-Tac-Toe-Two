@@ -1,33 +1,34 @@
 <template>
   <div class="pvp-online">
-    <div class="content">
     <h1>Play Online</h1>
+    <p v-if="roomId" class="room-code">Room Code: {{ roomId }}</p>
     <div v-if="!roomId" class="game-setup">
       <button @click="createRoom" class="btn btn-host">Host Game</button>
-      <p> or </p>
+      <p class="or">or</p>
       <input v-model="joinRoomId" placeholder="Enter Room ID" class="room-input" />
       <button @click="joinRoom" class="btn btn-join">Join Game</button>
     </div>
-    <div v-else class="game-info">
-      <p v-if="!gameStarted" class="waiting-text">
-        Waiting for opponent...<br>
-        Room ID: {{ roomId }}
-      </p>
-      <p v-if="gameStarted" class="started-text">Game started! Room ID: {{ roomId }}</p>
-      <GameBoard v-if="gameStarted" :mode="'online'" :socket="socket" :roomId="roomId" :playerMark="playerMark" />
-    </div>
-    </div>
+    <GameBoardOnline 
+      v-if="gameStarted" 
+      :socket="socket" 
+      :roomId="roomId" 
+      :playerMark="playerMark"
+      :gameMode="gameMode"
+      @updateScore="updateScores"
+      @playSound="playSound" 
+      @restartGame="handleRestartGame"
+    />
   </div>
 </template>
 
 <script>
 import { io } from 'socket.io-client';
-import GameBoard from './GameBoard.vue';
+import GameBoardOnline from './GameBoardOnline.vue';
 
 export default {
   name: 'PvPOnline',
   components: {
-    GameBoard
+    GameBoardOnline
   },
   data() {
     return {
@@ -35,7 +36,12 @@ export default {
       roomId: null,
       joinRoomId: '',
       gameStarted: false,
-      playerMark: ''
+      playerMark: '',
+      gameMode: 'bo3', // or 'bo5'
+      scores: { X: 0, O: 0 },
+      soundX: null,
+      soundO: null,
+      backgroundMusic: null
     };
   },
   methods: {
@@ -48,6 +54,25 @@ export default {
         return;
       }
       this.socket.emit('joinRoom', this.joinRoomId.trim());
+    },
+    updateScores(scores) {
+      this.scores = scores;
+    },
+    playSound(type) {
+      if (type === 'X') {
+        this.soundX.play();
+      } else if (type === 'O') {
+        this.soundO.play();
+      }
+    },
+    startBackgroundMusic() {
+      this.backgroundMusic.play();
+    },
+    handleRestartGame() {
+      this.scores = { X: 0, O: 0 };
+      if (this.socket) {
+        this.socket.emit('restartGame', { roomId: this.roomId });
+      }
     }
   },
   mounted() {
@@ -75,6 +100,14 @@ export default {
       this.gameStarted = false;
       this.playerMark = '';
     });
+
+    // Initialize audio
+    this.soundX = new Audio(require('@/assets/sound1.mp3'));
+    this.soundO = new Audio(require('@/assets/sound2.mp3'));
+    this.backgroundMusic = new Audio(require('@/assets/bkgd-music.mp3'));
+    this.backgroundMusic.loop = true;
+    this.backgroundMusic.volume = 0.5;
+    this.startBackgroundMusic();
   }
 };
 </script>
@@ -91,43 +124,39 @@ export default {
   min-height: 100vh; 
   width: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: center;
   font-family: 'Just Me Again Down Here', Verdana, Geneva, Tahoma, sans-serif;
-  position: relative;
-  overflow: hidden;
-}
-.content {
-  display: flex;
-  margin-bottom: 220px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  max-width: 800px;
-  width: 90%;
-  padding: 20px;
+  padding-top: 20px;
   box-sizing: border-box;
 }
+
 h1 {
   font-family: 'Luckiest Guy', cursive;
-  font-size: 48px;
-  color: #FFECEC;
-  margin-bottom: 30px;
-}
-p {
-  font-size: 36px;
-  padding: 0px;
+  font-size: 42px;
+  color: #ff4583;
   margin-bottom: 10px;
 }
 
-.game-setup, .game-info {
+.room-code {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+
+.or {
+  font-family: 'Just Me Again Down Here', Verdana;
+  font-size: 36px;
+}
+
+.game-setup {
   background-color: rgba(50, 50, 50, 0.596);
   padding: 15px;
   border-radius: 10px;
   width: 400px;
-  height: 320px;
-  max-width: 500px;
+  height: 300px;
+  margin:25px 0px 20px 0px;
 }
 
 .room-input {
@@ -145,9 +174,9 @@ p {
 .btn {
   display: block;
   margin: 15px auto;
-  padding: 15px 30px;
+  padding: 10px 20px;
   font-family: 'Luckiest Guy', cursive;
-  font-size: 24px;
+  font-size: 18px;
   border: 3px solid #FFECEC;
   border-radius: 10px;
   background-color: #1E1E1E;
@@ -159,7 +188,6 @@ p {
   background-image: linear-gradient(45deg, #28d986, #2bc2f0 ,#5c2bf0);
   -webkit-background-clip: text;
   background-clip: text;
-  margin-bottom: 2px;
   color: transparent;
 }
 
@@ -176,6 +204,99 @@ p {
 
 .waiting-text, .started-text {
   font-size: 24px;
+  font-family: 'Just Me Again Down Here', cursive;
   text-align: center;
+}
+.code{
+  font-family:  'Luckiest Guy', cursive;
+  font-size: 29px;
+  text-align: center;
+  padding-top: 5px;
+}
+.scoreboard {
+  display: flex;
+  justify-content: center;
+  gap: 540px;
+  margin-bottom: 0px;
+  position: absolute;
+  top: 296px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1267px;
+}
+
+.score-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px;
+  border-radius: 10px;
+  background: #1a1a1a;
+  position: relative;
+  overflow: hidden;
+}
+
+.score-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ff2277, #ff851a);
+  z-index: 0;
+  border-radius: 12px;
+}
+
+.score-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #1a1a1a;
+  z-index: 1;
+  margin: 2px;
+  border-radius: 8px;
+}
+
+.score-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+.score-x::before {
+  background: linear-gradient(45deg, #ff00ff, #ff66ff);
+}
+
+.score-o::before {
+  background: linear-gradient(45deg, #00ffff, #66ffff);
+}
+
+.score-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 5px;
+}
+
+.score {
+  font-size: 24px;
+  font-weight: bold;
+  background: linear-gradient(45deg, #ff00ff, #00ffff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.score-x .score {
+  background: linear-gradient(45deg, #ff00ff, #ff66ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.score-o .score {
+  background: linear-gradient(45deg, #00ffff, #66ffff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 </style>
